@@ -1,3 +1,4 @@
+// Use npm run deploy to build the application before Wrangler deploys this Worker.
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "mailflare",
