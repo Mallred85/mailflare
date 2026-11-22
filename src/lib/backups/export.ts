@@ -4,14 +4,14 @@ import type { BackupTableGroupId, DatabaseBackupDocument, DatabaseBackupTable, D
 import { mergeLegacyMessageBodies } from "./utils";
 import { BACKUP_TABLE_GROUPS, getSelectedBackupTables } from "./table-groups";
 
-export const BACKUP_TABLES: DatabaseBackupTable[] = ["users", "user_compose_preferences", "domains", "domain_tracking_hosts", "mailboxes", "mailbox_access", "contacts", "folders", "api_keys", "messages", "message_attachments", "shared_attachment_links", "outbound_jobs", "message_tracking", "message_opens", "follow_ups", "routing_rules", "webhooks", "webhook_deliveries", "sessions", "audit_logs", "backup_settings", "backups", "app_settings", "license_settings", "email_templates", "calendar_events", "booking_events", "auto_reply_deliveries", "spam_token_stats", "spam_reputation", "spam_feedback", "mailbox_aliases", "password_reset_tokens", "mfa_recovery_codes", "login_challenges", "passkey_credentials", "mailbox_agent_settings", "agent_conversations", "agent_chat_messages", "agent_jobs", "agent_draft_metadata", "agent_send_approvals", "mcp_key_mailboxes", "ai_usage", "drive_items", "drive_upload_parts", "drive_shares"];
+export const BACKUP_TABLES: DatabaseBackupTable[] = ["users", "user_compose_preferences", "domains", "domain_tracking_hosts", "mailboxes", "mailbox_access", "contacts", "folders", "api_keys", "messages", "message_attachments", "shared_attachment_links", "outbound_jobs", "message_tracking", "message_opens", "follow_ups", "conversation_notes", "routing_rules", "webhooks", "webhook_deliveries", "sessions", "audit_logs", "backup_settings", "backups", "app_settings", "license_settings", "email_templates", "calendar_events", "calendar_event_overrides", "calendar_occurrence_responses", "calendar_invite_tombstones", "booking_events", "booking_confirmation_templates", "auto_reply_deliveries", "spam_token_stats", "spam_reputation", "spam_feedback", "mailbox_aliases", "password_reset_tokens", "mfa_recovery_codes", "login_challenges", "passkey_credentials", "mailbox_agent_settings", "agent_conversations", "agent_chat_messages", "agent_jobs", "agent_draft_metadata", "agent_send_approvals", "mcp_key_mailboxes", "ai_usage", "drive_items", "drive_upload_parts", "drive_shares"];
 /**
  * Tables every backup document must contain. Tables added to BACKUP_TABLES
  * after the format shipped are absent from older documents, so they stay
  * optional here and are filled in as empty on restore.
  */
 /** Added by migrations 0068 and later; databases that have not applied them yet back up and restore without them. */
-const LATER_MIGRATION_TABLES: DatabaseBackupTable[] = ["domain_tracking_hosts", "message_tracking", "message_opens", "follow_ups", "user_compose_preferences"];
+const LATER_MIGRATION_TABLES: DatabaseBackupTable[] = ["domain_tracking_hosts", "message_tracking", "message_opens", "follow_ups", "conversation_notes", "user_compose_preferences", "booking_confirmation_templates"];
 const REQUIRED_BACKUP_TABLES: DatabaseBackupTable[] = ["users", "domains", "mailboxes", "mailbox_access", "contacts", "folders", "api_keys", "messages", "message_attachments", "outbound_jobs", "routing_rules", "webhooks", "webhook_deliveries", "sessions", "audit_logs", "backup_settings", "backups", "app_settings", "license_settings"];
 const INSERT_BATCH_SIZE = 50;
 
@@ -54,6 +54,10 @@ export const INTERNAL_TABLES = [
 	"webauthn_challenges",
 	"passkey_enrollment_grants",
 	"auth_step_ups",
+	// Single-use undo-token consumption records. Restoring a stale claim would
+	// let an already-used undo token be replayed, and the table is rewritten by
+	// the installation that owns the tokens.
+	"message_action_undo_claims",
 ];
 
 /**
@@ -193,6 +197,15 @@ function fillMissingBackupTables(document: DatabaseBackupDocument): void {
 	}
 	for (const row of document.tables.booking_events ?? []) {
 		if (row.slug === undefined && typeof row.id === "string") row.slug = Array.from(new TextEncoder().encode(row.id)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+	}
+	// `private_draft` was added after drafts existed. A backup from before that column restores with
+	// the default false unless it is derived the way migration 0090 backfills it, which would publish
+	// every draft to the mailbox's other readers: drafts, plus outbound mail in Trash, Archive or the
+	// inbox that no outbound job ever sent.
+	const submitted = new Set((document.tables.outbound_jobs ?? []).map((job) => job.message_id));
+	for (const row of document.tables.messages ?? []) {
+		if (row.private_draft !== undefined) continue;
+		row.private_draft = row.status === "draft" || (row.direction === "outbound" && ["trash", "received", "archived"].includes(String(row.status)) && !submitted.has(row.id)) ? 1 : 0;
 	}
 	// `require_second_factor` was added after TOTP already existed. A backup from
 	// before that column restores with the default false unless it is derived,
