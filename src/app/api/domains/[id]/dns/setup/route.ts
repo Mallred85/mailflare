@@ -6,12 +6,13 @@ import { domains } from "@/db/schema";
 import { requireUser } from "@/lib/auth/cookies";
 import { canManageDomains } from "@/lib/auth/admin";
 import { getDomainForUser } from "@/lib/domains/service";
-import { getDomainDnsView } from "@/lib/domains/dns-view";
+import { getDomainDnsView, isDomainDnsReady } from "@/lib/domains/dns-view";
 import type { DnsAuthRecord } from "@/lib/domains/dns-audit";
 import { adoptCloudflareZone } from "@/lib/domains/adopt-zone";
 import { setupDomainDnsRecord } from "@/lib/domains/dns-setup";
 import { MxConflictError } from "@/lib/domains/receiving-dns";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
+import { mtaStsBlockedResponse } from "@/lib/deliverability/mta-sts-block-response";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -37,6 +38,7 @@ export async function POST(request: Request, { params }: Params) {
 		domain = await adoptCloudflareZone(env, domain);
 		await setupDomainDnsRecord(env, domain, record, { replaceMx: body.replaceMx === true });
 		const dns = await getDomainDnsView(env, domain);
+		await isDomainDnsReady(env, domain);
 		const [updated] = await getDb(env)
 			.select()
 			.from(domains)
@@ -47,6 +49,8 @@ export async function POST(request: Request, { params }: Params) {
 			dns,
 		});
 	} catch (err) {
+		const blocked = await mtaStsBlockedResponse(err);
+		if (blocked) return blocked;
 		// 409 MX_CONFLICT asks the caller to confirm and retry with replaceMx.
 		if (err instanceof MxConflictError) return NextResponse.json({ error: err.message, code: err.code, records: err.records }, { status: 409 });
 		const message = err instanceof Error ? err.message : "Failed to set up DNS record";

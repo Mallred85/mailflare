@@ -14,6 +14,9 @@ import {
 	parseNewMessageEvent,
 	REALTIME_FALLBACK_INTERVAL_MS,
 	REALTIME_HEARTBEAT_INTERVAL_MS,
+	REALTIME_POLL_INTERVAL_MS,
+	isRealtimeSocketAvailable,
+	countsDeltaForNewMessage,
 	showBrowserNewMessageNotification,
 } from "./message-realtime-utils";
 
@@ -53,7 +56,7 @@ export function useMessagePolling(): MessageRealtimeState {
 			if (fallbackTimer) return;
 			fallbackTimer = window.setInterval(() => {
 				if (!connected && document.visibilityState === "visible") dispatchMessagesChanged();
-			}, REALTIME_FALLBACK_INTERVAL_MS);
+			}, isRealtimeSocketAvailable() ? REALTIME_FALLBACK_INTERVAL_MS : REALTIME_POLL_INTERVAL_MS);
 		}
 
 		function setConnected(value: boolean) {
@@ -87,6 +90,8 @@ export function useMessagePolling(): MessageRealtimeState {
 			} catch { return; }
 			const event = parseNewMessageEvent(payload);
 			if (!event) return;
+			const countsDelta = countsDeltaForNewMessage(event);
+			if (countsDelta) window.dispatchEvent(new CustomEvent("mailflare:message-counts-delta", { detail: countsDelta }));
 			dispatchMessagesChanged();
 			setNotification(event);
 			if (fromSocket) {
@@ -134,7 +139,7 @@ export function useMessagePolling(): MessageRealtimeState {
 		}
 
 		function requestLeadership() {
-			if (stopped || !getClientSessionToken()) return;
+			if (stopped || !getClientSessionToken() || !isRealtimeSocketAvailable()) return;
 			if (!channel || !navigator.locks) {
 				leader = true;
 				connect();

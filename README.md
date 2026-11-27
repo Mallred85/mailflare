@@ -3,11 +3,13 @@
 
 # Mailflare
 
-A self-hosted alternative to Google Workspace. Setup **custom domain Emails**, **Calendar, Drive, Booking** and **built-in AI agents**.
+A self-hosted alternative to Google Workspace. Setup **custom domain Emails**, **Calendar, Drive, Booking** and **built-in AI agents**. Deploy it to Cloudflare, Docker or Vercel
 
-Self-host it on Cloudflare or Docker. **Or try [Mailflare Cloud](https://cloud.mailflare.co?ref=github) with high-deliverable emails** from $4​
+**Try [Mailflare Cloud](https://cloud.mailflare.co?ref=github)** with high-deliverable emails without managing your deployments
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/hieunc229/mailflare)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/hieunc229/mailflare) 
+<a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhieunc229%2Fmailflare&amp;env=CRON_SECRET&amp;envDescription=See%20docs%2Fvercel.md&amp;envLink=https%3A%2F%2Fgithub.com%2Fhieunc229%2Fmailflare%2Fblob%2Fmain%2Fdocs%2Fvercel.md" rel="nofollow"><img src="https://camo.githubusercontent.com/ff0e5692ba93a62d065d9523e5a7e15ed5e2e15a2866758b3276a4f7b77eaac6/68747470733a2f2f76657263656c2e636f6d2f627574746f6e" alt="Deploy with Vercel" data-canonical-src="https://vercel.com/button" style="max-width: 100%;height: 39px;"></a>
+
 
 ## Screenshots
 
@@ -29,7 +31,7 @@ Self-host it on Cloudflare or Docker. **Or try [Mailflare Cloud](https://cloud.m
 ### Apps
 
 - **Email**: Custom domain mailboxes, personal or shared, with access you control. Send and receive with Cloudflare Email, Resend or Amazon SES.
-- **Routing rules**: Store, forward, reject or sort incoming mail.
+- **Routing rules**: Store, forward, reject or sort incoming mail, including a one-rule filter for newsletters and promotions.
 - **Calendar**: Repeating events with time zones. Attendees get email invitations.
 - **Booking**: Share a public link so anyone can book a free time on your calendar.
 - **Drive**: Store and share files.
@@ -39,9 +41,9 @@ Self-host it on Cloudflare or Docker. **Or try [Mailflare Cloud](https://cloud.m
 
 - **Databases**: Cloudflare D1 (default), PostgreSQL, MySQL, Turso / libSQL, or a local SQLite file. Set `DATABASE_URL` to switch. Works with Supabase, Neon, PlanetScale, TiDB and more. See [Databases](docs/databases.md).
 - **File storage**: Cloudflare R2, Backblaze B2 or AWS S3.
-- **Hosting**: Cloudflare Workers or a single Docker container.
+- **Hosting**: Cloudflare Workers, a single Docker container, or Vercel.
 - **Admin**: Users, API keys, webhooks, audit logs and backups.
-- **Import**: Bring in mail from IMAP, Gmail Takeout, `.eml` and `.mbox` files.
+- **Import**: Bring in mail from IMAP, Gmail Takeout, `.eml` and `.mbox` files, and Google Calendar events, Google Contacts and Google Drive files from Takeout. See [Importing from Google Takeout](docs/import.md).
 
 Mailflare currently supports 34 languages, including English, Português (Brasil), Português (Portugal), Español, Français, Deutsch, Italiano, Nederlands, Polski, Українська, Русский, Türkçe, 中文（简体）, 日本語, 한국어, Bahasa Indonesia, Bahasa Melayu, Tiếng Việt, ไทย, हिन्दी, বাংলা, मराठी, తెలుగు, தமிழ், ગુજરાતી, ಕನ್ನಡ, മലയാളം, ਪੰਜਾਬੀ, සිංහල, Kiswahili, Hausa, plus العربية, اردو and فارسی (right-to-left).
 
@@ -102,6 +104,14 @@ Or skip the build and run the prebuilt image: `docker compose -f docker-compose.
 
 See [self-hosting](docs/self-hosting.md).
 
+### Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhieunc229%2Fmailflare&env=CRON_SECRET&envDescription=See%20docs%2Fvercel.md&envLink=https%3A%2F%2Fgithub.com%2Fhieunc229%2Fmailflare%2Fblob%2Fmain%2Fdocs%2Fvercel.md)
+
+Vercel needs a hosted database (such as Turso, connected from the Vercel Marketplace) and storage: a Vercel Blob store (**it must be private**), AWS S3 or Backblaze B2 (check the [Blob free limits](docs/vercel.md#storage) for mail); queues use Vercel Queues (beta). Mail arrives through the [email relay Worker](deploy/cloudflare-email-relay/README.md), Resend or Amazon SES. The Hobby plan works for non-commercial use. After deploying, add the database and storage, and start the [five-minute schedule](docs/vercel.md#five-minute-schedule). Keep the database in the same region as the functions: the [first setup](docs/vercel.md#first-setup) can otherwise take many minutes.
+
+Setup steps, variables and limits: [Vercel guide](docs/vercel.md).
+
 ## Local development
 
 ```bash
@@ -122,10 +132,12 @@ A schema change needs a migration for each database type. See [Databases](docs/d
 ## Documentation
 
 - [Deployment and configuration](docs/deployment.md)
+- [Deploying to Vercel](docs/vercel.md)
 - [Databases](docs/databases.md)
 - [Sending and receiving providers](docs/providers.md)
 - [API and integrations](docs/api.md)
 - [Email assistant and MCP](docs/email-assistant-and-mcp.md)
+- [Importing from Google Takeout](docs/import.md)
 - [Adding a language](docs/localization.md)
 - [Troubleshooting](docs/troubleshooting.md)
 

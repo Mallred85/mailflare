@@ -33,6 +33,8 @@ interface CloudflareEnv {
 	LOGIN_RATE_LIMIT?: RateLimit;
 	/** Mobile device sign-in (`/api/auth/device`), stricter than the web login. */
 	DEVICE_LOGIN_RATE_LIMIT?: RateLimit;
+	/** CalDAV/CardDAV requests per app password (600 per minute) and writes per user. */
+	DAV_RATE_LIMIT?: RateLimit;
 	/** APNs auth key for the mobile push relay (src/lib/push/native.ts). */
 	APNS_KEY_ID?: string;
 	APNS_TEAM_ID?: string;
@@ -72,8 +74,8 @@ interface CloudflareEnv {
 	GITHUB_UPDATE_TOKEN?: string;
 	GITHUB_UPDATE_REF?: string;
 	GITHUB_UPDATE_REPO?: string;
-	/** "node" when served by the self-hosted runtime in server/; unset on Workers. */
-	MAILFLARE_RUNTIME?: "node";
+	/** "node" when served by the self-hosted runtime in server/, "vercel" on Vercel; unset on Workers. */
+	MAILFLARE_RUNTIME?: "node" | "vercel";
 	/** Shared secret the Cloudflare email relay signs inbound webhooks with (self-hosted only). */
 	INBOUND_WEBHOOK_SECRET?: string;
 	/** "1" refuses relays that do not sign the header map with a timestamp (relay Worker v2). */
